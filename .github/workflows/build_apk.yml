@@ -1,0 +1,98 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Buildozer / p4a
+        # key changes whenever the build config changes (so spec edits
+        # invalidate the cache) but stays stable across pure code pushes.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ccache git libffi-dev libssl-dev \
+            libjpeg-dev zlib1g-dev autoconf libtool \
+            automake libsqlite3-dev libstdc++6 libgomp1 \
+            unzip wget
+
+      - name: Install Cython 3.0.10
+        # 3.0.10 is the last release before a segfault in p4a recipes
+        # broke every build. Pin exactly.
+        run: python -m pip install --upgrade pip
+        run: python -m pip install "cython==3.0.10"
+
+      - name: Install Buildozer
+        run: python -m pip install "buildozer==1.5.0"
+
+      - name: Pre-accept Android SDK licenses
+        env:
+          ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+        run: |
+          mkdir -p "$ANDROIDSDK/licenses"
+          # Standard accepted license hashes for the SDK + NDK bundles p4a pulls.
+          cat > "$ANDROIDSDK/licenses/android-sdk-license" <<'EOF'
+
+          8933bad161af4178b1185d1a37fbf41ea5269c55
+          d56f5187479451eabf01fb78af6dfcb131a6481e
+          24333f8a63b6825ea9c5514f83c2829b004d1fee
+          EOF
+          cat > "$ANDROIDSDK/licenses/android-sdk-preview-license" <<'EOF'
+
+          84831b9409646a918e30573bab4c9c91346d8abd
+          EOF
+          cat > "$ANDROIDSDK/licenses/android-googletv-license" <<'EOF'
+
+          601085b94cd77f0b54ff86406957099ebe79c4d6
+          EOF
+          cat > "$ANDROIDSDK/licenses/mips-android-sysimage-license" <<'EOF'
+
+          e9acab5b5fbb560a72cfaecce8946896ff6aab9d
+          EOF
+          cat > "$ANDROIDSDK/licenses/android-sdk-arm-dbt-license" <<'EOF'
+
+          859f317696f67ef3d7f30a50a5560e7834b43903
+          EOF
+
+      - name: Build debug APK
+        run: buildozer -v android debug
+
+      - name: List built artifacts
+        run: ls -lh bin/ 2>/dev/null || true
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ride-analyzer-debug-apk
+          path: bin/*.apk
+          if-no-files-found: error
+          retention-days: 90

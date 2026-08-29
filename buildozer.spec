@@ -14,6 +14,11 @@ source.dir = .
 # (list) Source files to include (let empty to include all the files)
 source.include_exts = py,png,jpg,jpeg,jfif,kv,atlas,json,txt
 
+# Build only the arm64 architecture (all phones from 2017+). Cuts build
+# time roughly in half vs. building both arm64 and armv7. If you ever need
+# to support a 32-bit-only device, add "armeabi-v7a" here.
+android.archs = arm64-v8a
+
 # (str) Application versioning (method 1)
 version = 1.0.0
 

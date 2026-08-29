@@ -99,9 +99,26 @@ jobs:
           # Run buildozer with `yes` piped in so any remaining license
           # prompt gets auto-accepted (works for the auto-downloaded
           # platforms;android-33, build-tools;33.0.x, etc.)
-          yes | buildozer -v android debug 2>&1 | tee build.log
+          # Retry up to 3 times for transient HTTP 502/503/504 errors
+          # from the p4a recipe downloads.
+          for attempt in 1 2 3; do
+            echo "=== Build attempt $attempt/3 ==="
+            yes | buildozer -v android debug 2>&1 | tee build.log
+            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+              echo "buildozer succeeded on attempt $attempt"
+              break
+            fi
+            # Detect transient 5xx errors
+            if grep -qE 'HTTP Error (502|503|504)' build.log; then
+              echo "Transient HTTP 5xx detected; retrying in 10s..."
+              sleep 10
+              continue
+            fi
+            echo "Non-transient failure; aborting."
+            break
+          done
           # If build still failed, dump the last 80 lines for diagnosis
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          if ! ls bin/*.apk 2>/dev/null; then
             echo "--- last 80 lines of build.log ---"
             tail -n 80 build.log
             exit 1

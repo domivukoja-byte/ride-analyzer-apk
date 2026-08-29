@@ -32,7 +32,7 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-v4-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v5-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -117,8 +117,18 @@ jobs:
               find ~/.buildozer -name "*.partial" -delete 2>/dev/null || true
             fi
             # write buildozer's own output (which is very chatty) to
-            # build.log. The pipe to "y" auto-accepts license prompts.
-            ( for i in $(seq 1 1000); do echo "y"; done ) | buildozer -v android debug > build.log 2>&1
+            # build.log. We feed stdin via Python so we can control the
+            # size and timing of the y-stdin. A finite `for i in $(seq
+            # 1 1000)` loop was tried first, but it ran out of y's
+            # when sdkmanager asked for a second/third "Accept? (y/N):"
+            # and then crashed waiting for input. An infinite stream
+            # from `yes` also doesn't work because buildozer closes
+            # stdin and `yes` gets SIGPIPE, which under GHA's implicit
+            # `set -e` aborts the whole step. A Python generator
+            # silently absorbs the broken-pipe signal.
+            python -c "import sys,signal
+signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+sys.stdout.write('y\n' * 200000)" | buildozer -v android debug > build.log 2>&1
             rc=$?
             echo "==== attempt ${attempt} exited rc=${rc} ===="
             if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null >/dev/null; then

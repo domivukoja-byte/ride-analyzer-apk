@@ -39,7 +39,7 @@ version = 1.0.0
 # Note: p4a downloads cpython from
 #   https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz
 # which we pre-seed in the workflow.
-requirements = python3==3.11.4, kivy==2.3.0, kivymd==1.2.0, pillow, androidstorage4kivy, urllib3, certifi
+requirements = python3, kivy==2.3.0, kivymd==1.2.0, pillow, androidstorage4kivy, urllib3, certifi
 
 # (str) Presplash file
 presplash.filename = %(source.dir)s/assets/presplash.jpg

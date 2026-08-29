@@ -126,9 +126,7 @@ jobs:
             # stdin and `yes` gets SIGPIPE, which under GHA's implicit
             # `set -e` aborts the whole step. A Python generator
             # silently absorbs the broken-pipe signal.
-            python -c "import sys,signal
-signal.signal(signal.SIGPIPE, signal.SIG_IGN)
-sys.stdout.write('y\n' * 200000)" | buildozer -v android debug > build.log 2>&1
+            python -c "import sys, signal; signal.signal(signal.SIGPIPE, signal.SIG_IGN); sys.stdout.write('y\n' * 200000)" | buildozer -v android debug > build.log 2>&1
             rc=$?
             echo "==== attempt ${attempt} exited rc=${rc} ===="
             if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null >/dev/null; then

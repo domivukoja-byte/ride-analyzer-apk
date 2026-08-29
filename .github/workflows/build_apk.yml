@@ -33,7 +33,7 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          key: ${{ runner.os }}-buildozer-v9-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v10-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -46,25 +46,23 @@ jobs:
             automake libsqlite3-dev libstdc++6 libgomp1 \
             unzip wget
 
-      - name: Pre-seed p4a package cache with Python 3.14
+      - name: Pre-seed p4a package cache with Python 3.11.4
         # python.org intermittently returns HTTP 502 to GitHub's IP when
         # p4a tries to download the hostpython3 / python3 tarballs. Pre-
         # downloading here puts the file where buildozer's p4a expects
         # it and skips the network call entirely. With buildozer 1.5.0,
-        # p4a (master branch) downloads CPython from GitHub:
+        # p4a (develop branch) downloads CPython from GitHub:
         #   https://github.com/python/cpython/archive/refs/tags/v{version}.tar.gz
-        # where {version} is p4a's default (currently 3.14.2). The tarball
-        # is named after the upstream URL basename. We pre-seed under
-        # multiple possible filenames so the cache works regardless of
-        # which filename p4a derives from the URL.
+        # We pin python3==3.11.4 in buildozer.spec (Kivy 2.3.0 uses 3.11
+        # internals that changed in 3.12+).
         run: |
           BUILDOZER_PKG="$HOME/.buildozer/android/packages"
           mkdir -p "$BUILDOZER_PKG/hostpython3" "$BUILDOZER_PKG/python3"
           ok=false
           for url in \
-            "https://github.com/python/cpython/archive/refs/tags/v3.14.2.tar.gz" \
             "https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz" \
             "https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
+            "https://github.com/python/cpython/archive/refs/tags/v3.14.2.tar.gz" \
           ; do
             if wget -q --tries=3 --timeout=120 -O /tmp/p4a_python.tar.gz "$url"; then
               echo "downloaded from $url ($(stat -c %s /tmp/p4a_python.tar.gz) bytes)"
@@ -78,10 +76,8 @@ jobs:
             exit 1
           fi
           for recipe in hostpython3 python3; do
-            cp /tmp/p4a_python.tar.gz "$BUILDOZER_PKG/$recipe/v3.14.2.tar.gz"
             cp /tmp/p4a_python.tar.gz "$BUILDOZER_PKG/$recipe/v3.11.4.tar.gz"
             cp /tmp/p4a_python.tar.gz "$BUILDOZER_PKG/$recipe/Python-3.11.4.tar.xz"
-            touch "$BUILDOZER_PKG/$recipe/.mark-v3.14.2.tar.gz"
             touch "$BUILDOZER_PKG/$recipe/.mark-v3.11.4.tar.gz"
             touch "$BUILDOZER_PKG/$recipe/.mark-Python-3.11.4.tar.xz"
             echo "seeded $recipe"

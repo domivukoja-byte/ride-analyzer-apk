@@ -33,7 +33,7 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          key: ${{ runner.os }}-buildozer-v10-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v11-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 

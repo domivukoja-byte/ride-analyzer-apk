@@ -79,6 +79,11 @@ blacklist = doc/, tests/, .github/, README.md, .gitignore, *.pyc, __pycache__/, 
 # (bool) Whitelist for forcing the orientation
 orientation = portrait
 
+# Local p4a recipe overrides (see p4a_recipes/).
+# freetype is overridden to use the working download-mirror.savannah.gnu.org
+# host because the primary savannah host returns 502 to GitHub runner IPs.
+p4a.local_recipes = %(source.dir)s/p4a_recipes
+
 # (str) App's launch screen orientation
 # (auto / landscape / portrait)
 # launch_screen.orientation = portrait

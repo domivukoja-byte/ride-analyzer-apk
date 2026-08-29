@@ -55,12 +55,14 @@ jobs:
       - name: Install Buildozer
         run: python -m pip install "buildozer==1.5.0"
 
-      - name: Pre-accept Android SDK licenses
+      - name: Build debug APK (auto-accept SDK licenses)
         env:
+          # Yes-pipe the sdkmanager license prompt so p4a's android-sdk
+          # install can complete without manual interaction.
           ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
         run: |
           mkdir -p "$ANDROIDSDK/licenses"
-          # Standard accepted license hashes for the SDK + NDK bundles p4a pulls.
+          # Pre-accept the legacy license hashes (works for SDK < 34)
           cat > "$ANDROIDSDK/licenses/android-sdk-license" <<'EOF'
 
           8933bad161af4178b1185d1a37fbf41ea5269c55
@@ -71,6 +73,10 @@ jobs:
 
           84831b9409646a918e30573bab4c9c91346d8abd
           EOF
+          cat > "$ANDROIDSDK/licenses/android-sdk-arm-dbt-license" <<'EOF'
+
+          859f317696f67ef3d7f30a50a5560e7834b43903
+          EOF
           cat > "$ANDROIDSDK/licenses/android-googletv-license" <<'EOF'
 
           601085b94cd77f0b54ff86406957099ebe79c4d6
@@ -79,13 +85,27 @@ jobs:
 
           e9acab5b5fbb560a72cfaecce8946896ff6aab9d
           EOF
-          cat > "$ANDROIDSDK/licenses/android-sdk-arm-dbt-license" <<'EOF'
+          cat > "$ANDROIDSDK/licenses/android-sdk-system-image-license" <<'EOF'
 
-          859f317696f67ef3d7f30a50a5560e7834b43903
+          e9acab5b5fbb560a72cfaecce8946896ff6aab9d
           EOF
+          # Newer SDK versions use a different license key file
+          cat > "$ANDROIDSDK/licenses/android-sdk-license-android-35" <<'EOF'
 
-      - name: Build debug APK
-        run: buildozer -v android debug
+          8933bad161af4178b1185d1a37fbf41ea5269c55
+          d56f5187479451eabf01fb78af6dfcb131a6481e
+          24333f8a63b6825ea9c5514f83c2829b004d1fee
+          EOF
+          # Run buildozer with `yes` piped in so any remaining license
+          # prompt gets auto-accepted (works for the auto-downloaded
+          # platforms;android-33, build-tools;33.0.x, etc.)
+          yes | buildozer -v android debug 2>&1 | tee build.log
+          # If build still failed, dump the last 80 lines for diagnosis
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "--- last 80 lines of build.log ---"
+            tail -n 80 build.log
+            exit 1
+          fi
 
       - name: List built artifacts
         run: ls -lh bin/ 2>/dev/null || true

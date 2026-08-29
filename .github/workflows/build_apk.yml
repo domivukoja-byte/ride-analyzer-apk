@@ -33,7 +33,7 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          key: ${{ runner.os }}-buildozer-v7-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v8-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -50,30 +50,37 @@ jobs:
         # python.org intermittently returns HTTP 502 to GitHub's IP when
         # p4a tries to download the hostpython3 / python3 tarballs. Pre-
         # downloading here puts the file where buildozer's p4a expects
-        # it and skips the network call entirely. With buildozer, p4a's
-        # PACKAGES_PATH is $HOME/.buildozer/android/packages/<recipe>/.
+        # it and skips the network call entirely. With buildozer 1.5.0,
+        # p4a (master branch) downloads CPython from GitHub:
+        #   https://github.com/python/cpython/archive/refs/tags/v{version}.tar.gz
         # The tarball is named after the upstream URL basename.
         run: |
           BUILDOZER_PKG="$HOME/.buildozer/android/packages"
           mkdir -p "$BUILDOZER_PKG/hostpython3" "$BUILDOZER_PKG/python3"
           ok=false
           for url in \
+            "https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz" \
             "https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
             "https://download.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
           ; do
-            if wget -q --tries=3 --timeout=60 -O /tmp/Python-3.11.4.tar.xz "$url"; then
-              echo "downloaded from $url ($(stat -c %s /tmp/Python-3.11.4.tar.xz) bytes)"
+            if wget -q --tries=3 --timeout=120 -O /tmp/v3.11.4.tar.gz "$url"; then
+              echo "downloaded from $url ($(stat -c %s /tmp/v3.11.4.tar.gz) bytes)"
               ok=true
               break
             fi
             echo "wget failed for $url, trying next mirror"
           done
           if [ "$ok" != "true" ]; then
-            echo "ERROR: could not download Python-3.11.4.tar.xz"
+            echo "ERROR: could not download Python 3.11.4 tarball"
             exit 1
           fi
           for recipe in hostpython3 python3; do
-            cp /tmp/Python-3.11.4.tar.xz "$BUILDOZER_PKG/$recipe/Python-3.11.4.tar.xz"
+            cp /tmp/v3.11.4.tar.gz "$BUILDOZER_PKG/$recipe/v3.11.4.tar.gz"
+            # Fall back to the .tar.xz basename for p4a versions that
+            # still use python.org.
+            cp /tmp/v3.11.4.tar.gz "$BUILDOZER_PKG/$recipe/Python-3.11.4.tar.xz"
+            touch "$BUILDOZER_PKG/$recipe/.mark-v3.11.4.tar.gz"
+            touch "$BUILDOZER_PKG/$recipe/.mark-Python-3.11.4.tar.xz"
             echo "seeded $recipe"
           done
           ls -la "$BUILDOZER_PKG/hostpython3/"

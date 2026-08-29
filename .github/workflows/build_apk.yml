@@ -33,7 +33,7 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          key: ${{ runner.os }}-buildozer-v8-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v9-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -46,7 +46,7 @@ jobs:
             automake libsqlite3-dev libstdc++6 libgomp1 \
             unzip wget
 
-      - name: Pre-seed p4a package cache with Python 3.11.4
+      - name: Pre-seed p4a package cache with Python 3.11
         # python.org intermittently returns HTTP 502 to GitHub's IP when
         # p4a tries to download the hostpython3 / python3 tarballs. Pre-
         # downloading here puts the file where buildozer's p4a expects
@@ -59,28 +59,25 @@ jobs:
           mkdir -p "$BUILDOZER_PKG/hostpython3" "$BUILDOZER_PKG/python3"
           ok=false
           for url in \
-            "https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz" \
-            "https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
-            "https://download.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
+            "https://github.com/python/cpython/archive/refs/tags/v3.11.tar.gz" \
+            "https://www.python.org/ftp/python/3.11/Python-3.11.tar.xz" \
           ; do
-            if wget -q --tries=3 --timeout=120 -O /tmp/v3.11.4.tar.gz "$url"; then
-              echo "downloaded from $url ($(stat -c %s /tmp/v3.11.4.tar.gz) bytes)"
+            if wget -q --tries=3 --timeout=120 -O /tmp/v3.11.tar.gz "$url"; then
+              echo "downloaded from $url ($(stat -c %s /tmp/v3.11.tar.gz) bytes)"
               ok=true
               break
             fi
             echo "wget failed for $url, trying next mirror"
           done
           if [ "$ok" != "true" ]; then
-            echo "ERROR: could not download Python 3.11.4 tarball"
+            echo "ERROR: could not download Python 3.11 tarball"
             exit 1
           fi
           for recipe in hostpython3 python3; do
-            cp /tmp/v3.11.4.tar.gz "$BUILDOZER_PKG/$recipe/v3.11.4.tar.gz"
-            # Fall back to the .tar.xz basename for p4a versions that
-            # still use python.org.
-            cp /tmp/v3.11.4.tar.gz "$BUILDOZER_PKG/$recipe/Python-3.11.4.tar.xz"
-            touch "$BUILDOZER_PKG/$recipe/.mark-v3.11.4.tar.gz"
-            touch "$BUILDOZER_PKG/$recipe/.mark-Python-3.11.4.tar.xz"
+            cp /tmp/v3.11.tar.gz "$BUILDOZER_PKG/$recipe/v3.11.tar.gz"
+            cp /tmp/v3.11.tar.gz "$BUILDOZER_PKG/$recipe/Python-3.11.tar.xz"
+            touch "$BUILDOZER_PKG/$recipe/.mark-v3.11.tar.gz"
+            touch "$BUILDOZER_PKG/$recipe/.mark-Python-3.11.tar.xz"
             echo "seeded $recipe"
           done
           ls -la "$BUILDOZER_PKG/hostpython3/"

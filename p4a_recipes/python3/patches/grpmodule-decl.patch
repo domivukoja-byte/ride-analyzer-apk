@@ -1,0 +1,21 @@
+--- cpython-3.11.4/Modules/grpmodule.c
++++ cpython-3.11.4.mod/Modules/grpmodule.c
+@@ -1,6 +1,15 @@
+ /* UNIX group file access module */
+
+ #include "Python.h"
+ #include "posixmodule.h"
+
+ #include <grp.h>
+
++/* Android NDK r28+ doesn't declare setgrent/getgrent/endgrent in
++ * <grp.h>. Clang treats calls to undeclared functions as errors under
++ * -Wimplicit-function-declaration. Declare them here to match the
++ * 3.11.4 grpmodule.c usage. */
++extern void setgrent(void);
++extern struct group *getgrent(void);
++extern void endgrent(void);
++
+ #include "clinic/grpmodule.c.h"
+ /*[clinic input]
+ module grp

@@ -23,14 +23,14 @@ when we override `version`. We override `url` explicitly here too.
     https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz
 which is pre-seeded in the workflow.
 """
-from pythonforandroid.recipes.hostpython3 import Hostpython3Recipe
+from pythonforandroid.recipes.hostpython3 import HostPython3Recipe
 
 
-class Hostpython3Recipe_3_11_4(Hostpython3Recipe):
+class HostPython3Recipe_3_11_4(HostPython3Recipe):
     version = '3.11.4'
     # Parent's `url` is a class-level f-string computed once at import
     # time, so we must redeclare it with the matching version.
     url = 'https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz'
 
 
-recipe = Hostpython3Recipe_3_11_4()
+recipe = HostPython3Recipe_3_11_4()

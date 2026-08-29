@@ -30,7 +30,10 @@ version = 1.0.0
 # Kivy 2.3.0 + KivyMD 1.2.0 work together; androidstorage4kivy is the
 # SAF folder picker; pillow for the icon/presplash work; urllib3 + certifi
 # so Nominatim HTTPS calls don't fail with SSL errors on Android.
-requirements = python3==3.11.6, kivy==2.3.0, kivymd==1.2.0, pillow, androidstorage4kivy, urllib3, certifi
+# 3.11.4 instead of 3.11.6 because python.org's 3.11.6 tarball URL has
+# been returning HTTP 502 to GitHub's IP for weeks (kivy/python-for-android
+# issue #2640). 3.11.4 is the most-recent p4a-tested patch in 2026.
+requirements = python3==3.11.4, kivy==2.3.0, kivymd==1.2.0, pillow, androidstorage4kivy, urllib3, certifi
 
 # (str) Presplash file
 presplash.filename = %(source.dir)s/assets/presplash.jpg

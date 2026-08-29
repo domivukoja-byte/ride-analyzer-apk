@@ -100,25 +100,34 @@ jobs:
           # prompt gets auto-accepted (works for the auto-downloaded
           # platforms;android-33, build-tools;33.0.x, etc.)
           # Retry up to 3 times for transient HTTP 502/503/504 errors
-          # from the p4a recipe downloads.
-          for attempt in 1 2 3; do
-            echo "=== Build attempt $attempt/3 ==="
+          # from the p4a recipe downloads. On retry, clear partial
+          # downloads so the next attempt starts from scratch.
+          set +e  # don't abort on individual command failures
+          ok=0
+          for attempt in 1 2 3 4; do
+            echo "=== Build attempt $attempt/4 ==="
+            # clear partial recipe downloads so a fresh attempt can re-fetch
+            if [ "$attempt" -gt 1 ]; then
+              rm -rf .buildozer/android/packages
+              find ~/.buildozer -name "*.partial" -delete 2>/dev/null || true
+            fi
             yes | buildozer -v android debug 2>&1 | tee build.log
-            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            rc=${PIPESTATUS[0]}
+            if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null; then
               echo "buildozer succeeded on attempt $attempt"
+              ok=1
               break
             fi
             # Detect transient 5xx errors
             if grep -qE 'HTTP Error (502|503|504)' build.log; then
-              echo "Transient HTTP 5xx detected; retrying in 10s..."
-              sleep 10
+              echo "Transient HTTP 5xx detected; retrying in 15s..."
+              sleep 15
               continue
             fi
-            echo "Non-transient failure; aborting."
+            echo "Non-transient failure (rc=$rc); aborting."
             break
           done
-          # If build still failed, dump the last 80 lines for diagnosis
-          if ! ls bin/*.apk 2>/dev/null; then
+          if [ "$ok" -ne 1 ]; then
             echo "--- last 80 lines of build.log ---"
             tail -n 80 build.log
             exit 1

@@ -105,8 +105,9 @@ jobs:
           # Retry up to 3 times for transient 502/503/504 errors.
           # On retry, clear partial downloads so the next attempt starts
           # from scratch.
+          # set -x is OFF — its trace would dump 1000 echo y lines per
+          # attempt, drowning the actual buildozer output in the GHA log.
           set +e  # critical: do NOT inherit GHA's implicit `set -e`
-          set -x  # trace so we can see exactly what is happening
           attempt=1
           max=3
           while [ "$attempt" -le "$max" ]; do
@@ -115,7 +116,8 @@ jobs:
               rm -rf .buildozer/android/packages 2>/dev/null || true
               find ~/.buildozer -name "*.partial" -delete 2>/dev/null || true
             fi
-            # write directly to log file (no tee / pipe)
+            # write buildozer's own output (which is very chatty) to
+            # build.log. The pipe to "y" auto-accepts license prompts.
             ( for i in $(seq 1 1000); do echo "y"; done ) | buildozer -v android debug > build.log 2>&1
             rc=$?
             echo "==== attempt ${attempt} exited rc=${rc} ===="
@@ -136,7 +138,6 @@ jobs:
             fi
             attempt=$((attempt + 1))
           done
-          set +x
           if ! ls bin/*.apk 2>/dev/null >/dev/null; then
             echo "---- last 80 lines of build.log ----"
             tail -n 80 build.log

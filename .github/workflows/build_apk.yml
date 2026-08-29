@@ -49,33 +49,35 @@ jobs:
       - name: Pre-seed p4a package cache with Python 3.11.4
         # python.org intermittently returns HTTP 502 to GitHub's IP when
         # p4a tries to download the hostpython3 / python3 tarballs. Pre-
-        # downloading here puts the file where p4a expects it and skips
-        # the network call entirely. p4a looks for the tarball at
-        #   ~/.local/share/python-for-android/packages/<recipe>/
-        # and names it after the recipe's `version` (e.g. 3.11.4).
-        env:
-          PKG_DIR: ${{ runner.os == 'Linux' && '/home/runner/.local/share/python-for-android/packages/hostpython3' || '$(brew --prefix)/share/python-for-android/packages/hostpython3' }}
+        # downloading here puts the file where buildozer's p4a expects
+        # it and skips the network call entirely. With buildozer, p4a's
+        # PACKAGES_PATH is $HOME/.buildozer/android/packages/<recipe>/.
+        # The tarball is named after the upstream URL basename.
         run: |
-          mkdir -p "$HOME/.local/share/python-for-android/packages/hostpython3"
-          mkdir -p "$HOME/.local/share/python-for-android/packages/python3"
-          # .tar.xz is the canonical name; p4a derives the basename
-          # from `Python-<version>.tar.xz`.
-          for recipe in hostpython3 python3; do
-            for url in \
-              "https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
-              "https://download.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
-            ; do
-              if wget -q --tries=3 --timeout=60 -O \
-                "$HOME/.local/share/python-for-android/packages/$recipe/Python-3.11.4.tar.xz" \
-                "$url"; then
-                echo "pre-seeded $recipe from $url"
-                break
-              fi
-              echo "wget failed for $url, trying next mirror"
-            done
+          BUILDOZER_PKG="$HOME/.buildozer/android/packages"
+          mkdir -p "$BUILDOZER_PKG/hostpython3" "$BUILDOZER_PKG/python3"
+          ok=false
+          for url in \
+            "https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
+            "https://download.python.org/ftp/python/3.11.4/Python-3.11.4.tar.xz" \
+          ; do
+            if wget -q --tries=3 --timeout=60 -O /tmp/Python-3.11.4.tar.xz "$url"; then
+              echo "downloaded from $url ($(stat -c %s /tmp/Python-3.11.4.tar.xz) bytes)"
+              ok=true
+              break
+            fi
+            echo "wget failed for $url, trying next mirror"
           done
-          ls -la "$HOME/.local/share/python-for-android/packages/hostpython3/"
-          ls -la "$HOME/.local/share/python-for-android/packages/python3/"
+          if [ "$ok" != "true" ]; then
+            echo "ERROR: could not download Python-3.11.4.tar.xz"
+            exit 1
+          fi
+          for recipe in hostpython3 python3; do
+            cp /tmp/Python-3.11.4.tar.xz "$BUILDOZER_PKG/$recipe/Python-3.11.4.tar.xz"
+            echo "seeded $recipe"
+          done
+          ls -la "$BUILDOZER_PKG/hostpython3/"
+          ls -la "$BUILDOZER_PKG/python3/"
 
       - name: Install Cython 3.0.10
         # 3.0.10 is the last release before a segfault in p4a recipes

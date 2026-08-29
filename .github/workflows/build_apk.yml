@@ -32,7 +32,7 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-v2-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v3-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -96,10 +96,16 @@ jobs:
           d56f5187479451eabf01fb78af6dfcb131a6481e
           24333f8a63b6825ea9c5514f83c2829b004d1fee
           EOF
-          # Run buildozer with `yes` piped in so any remaining license
-          # prompt gets auto-accepted. Retry up to 3 times for transient
-          # 502/503/504 errors. On retry, clear partial downloads so the
-          # next attempt starts from scratch.
+          # Buildozer builds the APK; we pipe in a bounded stream of 'y'
+          # so any remaining sdkmanager license prompts are auto-accepted.
+          # A bounded loop (printf 1000 y's) is used instead of `yes` because
+          # when buildozer exits, the unbounded `yes` gets SIGPIPE and that
+          # exit-141 propagates through `set -e` (which GitHub Actions
+          # enables by default on run: blocks), killing the whole step.
+          # Retry up to 3 times for transient 502/503/504 errors.
+          # On retry, clear partial downloads so the next attempt starts
+          # from scratch.
+          set +e  # critical: do NOT inherit GHA's implicit `set -e`
           set -x  # trace so we can see exactly what is happening
           attempt=1
           max=3
@@ -109,9 +115,8 @@ jobs:
               rm -rf .buildozer/android/packages 2>/dev/null || true
               find ~/.buildozer -name "*.partial" -delete 2>/dev/null || true
             fi
-            # write directly to log file (no tee / pipe - SIGPIPE can
-            # cause weird failures on Ubuntu's /bin/dash)
-            yes | buildozer -v android debug > build.log 2>&1
+            # write directly to log file (no tee / pipe)
+            ( for i in $(seq 1 1000); do echo "y"; done ) | buildozer -v android debug > build.log 2>&1
             rc=$?
             echo "==== attempt ${attempt} exited rc=${rc} ===="
             if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null >/dev/null; then

@@ -30,10 +30,16 @@ version = 1.0.0
 # Kivy 2.3.0 + KivyMD 1.2.0 work together; androidstorage4kivy is the
 # SAF folder picker; pillow for the icon/presplash work; urllib3 + certifi
 # so Nominatim HTTPS calls don't fail with SSL errors on Android.
-# Use p4a's default Python (3.11 from develop branch). Don't pin a
-# specific patch version: p4a only supports certain version templates
-# in the URL, and pinning 3.11.4 broke the download step (2026).
-requirements = python3, kivy==2.3.0, kivymd==1.2.0, pillow, androidstorage4kivy, urllib3, certifi
+# Pin python3 to 3.11.4: p4a's current default is 3.14.2, but Kivy
+# 2.3.0's Cython-generated C uses Python 3.11 internal APIs
+# (_PyLong_AsByteArray with 5 args, _PyInterpreterState_GetConfig,
+# _PyUnicode_FastCopyCharacters) that changed signature in 3.12+ and
+# were removed in 3.14. Building Kivy against 3.14.2 fails with
+# "too few arguments to function call" errors. 3.11.4 works.
+# Note: p4a downloads cpython from
+#   https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz
+# which we pre-seed in the workflow.
+requirements = python3==3.11.4, kivy==2.3.0, kivymd==1.2.0, pillow, androidstorage4kivy, urllib3, certifi
 
 # (str) Presplash file
 presplash.filename = %(source.dir)s/assets/presplash.jpg

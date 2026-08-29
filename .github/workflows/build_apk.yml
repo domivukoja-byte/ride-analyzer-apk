@@ -33,7 +33,11 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          key: ${{ runner.os }}-buildozer-v12-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          # v13: forces fresh python3 build state so the
+          # grpmodule-decl.patch is applied (prior cached state had
+          # grpmodule.c un-patched and .patched marker present, which
+          # would make apply_patches short-circuit).
+          key: ${{ runner.os }}-buildozer-v13-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 

@@ -97,39 +97,46 @@ jobs:
           24333f8a63b6825ea9c5514f83c2829b004d1fee
           EOF
           # Run buildozer with `yes` piped in so any remaining license
-          # prompt gets auto-accepted (works for the auto-downloaded
-          # platforms;android-33, build-tools;33.0.x, etc.)
-          # Retry up to 3 times for transient HTTP 502/503/504 errors
-          # from the p4a recipe downloads. On retry, clear partial
-          # downloads so the next attempt starts from scratch.
-          set +e  # don't abort on individual command failures
-          ok=0
-          for attempt in 1 2 3 4; do
-            echo "=== Build attempt $attempt/4 ==="
-            # clear partial recipe downloads so a fresh attempt can re-fetch
+          # prompt gets auto-accepted. Retry up to 3 times for transient
+          # 502/503/504 errors. On retry, clear partial downloads so the
+          # next attempt starts from scratch.
+          set -x  # trace so we can see exactly what is happening
+          attempt=1
+          max=3
+          while [ "$attempt" -le "$max" ]; do
+            echo "==== Build attempt ${attempt}/${max} ===="
             if [ "$attempt" -gt 1 ]; then
-              rm -rf .buildozer/android/packages
+              rm -rf .buildozer/android/packages 2>/dev/null || true
               find ~/.buildozer -name "*.partial" -delete 2>/dev/null || true
             fi
-            yes | buildozer -v android debug 2>&1 | tee build.log
-            rc=${PIPESTATUS[0]}
-            if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null; then
-              echo "buildozer succeeded on attempt $attempt"
-              ok=1
+            # write directly to log file (no tee / pipe - SIGPIPE can
+            # cause weird failures on Ubuntu's /bin/dash)
+            yes | buildozer -v android debug > build.log 2>&1
+            rc=$?
+            echo "==== attempt ${attempt} exited rc=${rc} ===="
+            if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null >/dev/null; then
+              echo "==== buildozer succeeded on attempt ${attempt} ===="
               break
             fi
-            # Detect transient 5xx errors
-            if grep -qE 'HTTP Error (502|503|504)' build.log; then
-              echo "Transient HTTP 5xx detected; retrying in 15s..."
-              sleep 15
-              continue
+            if [ "$attempt" -ge "$max" ]; then
+              echo "==== final attempt failed (rc=${rc}) ===="
+              break
             fi
-            echo "Non-transient failure (rc=$rc); aborting."
-            break
+            if grep -qE 'HTTP Error (502|503|504)' build.log; then
+              echo "==== transient HTTP 5xx detected; retrying in 20s ===="
+              sleep 20
+            else
+              echo "==== non-transient failure (rc=${rc}); not retrying ===="
+              break
+            fi
+            attempt=$((attempt + 1))
           done
-          if [ "$ok" -ne 1 ]; then
-            echo "--- last 80 lines of build.log ---"
+          set +x
+          if ! ls bin/*.apk 2>/dev/null >/dev/null; then
+            echo "---- last 80 lines of build.log ----"
             tail -n 80 build.log
+            echo "---- url / 502 mentions from full log ----"
+            grep -E 'urlopen|HTTPError|Downloading|https?://|tar\.xz|tar\.gz|\.zip|\.aar' build.log | tail -n 200
             exit 1
           fi
 

@@ -32,7 +32,7 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-v5-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          key: ${{ runner.os }}-buildozer-v6-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -126,7 +126,11 @@ jobs:
             # stdin and `yes` gets SIGPIPE, which under GHA's implicit
             # `set -e` aborts the whole step. A Python generator
             # silently absorbs the broken-pipe signal.
-            python -c "import sys, signal; signal.signal(signal.SIGPIPE, signal.SIG_IGN); sys.stdout.write('y\n' * 200000)" | buildozer -v android debug > build.log 2>&1
+            # The python process keeps writing y's forever; SIGPIPE
+            # (raised when buildozer closes stdin) is ignored so the
+            # python writer doesn't die with a non-zero exit code
+            # that `set -e` would then catch.
+            python -u yes_pipe.py | buildozer -v android debug > build.log 2>&1
             rc=$?
             echo "==== attempt ${attempt} exited rc=${rc} ===="
             if [ "$rc" -eq 0 ] && ls bin/*.apk 2>/dev/null >/dev/null; then

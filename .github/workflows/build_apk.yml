@@ -33,11 +33,10 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          # v13: forces fresh python3 build state so the
-          # grpmodule-decl.patch is applied (prior cached state had
-          # grpmodule.c un-patched and .patched marker present, which
-          # would make apply_patches short-circuit).
-          key: ${{ runner.os }}-buildozer-v13-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          # v14: bump because v13 was still serving a stale
+          # python3 build dir via restore-keys, and grpmodule-decl.patch
+          # failed to match the (cached, possibly wrong-version) source.
+          key: ${{ runner.os }}-buildozer-v14-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -98,6 +97,22 @@ jobs:
 
       - name: Install Buildozer
         run: python -m pip install "buildozer==1.5.0"
+
+      - name: Clear stale python3 build state
+        # The buildozer cache (restored via restore-keys) preserves the
+        # extracted cpython-3.11.4 source tree AND a .patched marker.
+        # If the marker is present, p4a's apply_patches short-circuits
+        # and our grpmodule-decl.patch is never applied — leaving the
+        # missing setgrent/getgrent/endgrent declarations unfixed. Also,
+        # if a prior run used a different cpython version, the cached
+        # tree would have the wrong grpmodule.c and our patch would
+        # fail to match. nuke the build dir on every run.
+        run: |
+          rm -rf .buildozer/android/platform/build-*/build/other_builds/python3
+          rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/python3
+          rm -rf .buildozer/android/platform/build-*/build/other_builds/hostpython3
+          rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/hostpython3
+          echo "cleared python3 build state"
 
       - name: Build debug APK (auto-accept SDK licenses)
         env:

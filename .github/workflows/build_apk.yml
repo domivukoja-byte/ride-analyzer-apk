@@ -114,6 +114,26 @@ jobs:
           rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/hostpython3
           echo "cleared python3 build state"
 
+      - name: Snapshot grpmodule.c pre-extract
+        # Diagnostic: download cpython 3.11.4 tarball and save the raw
+        # grpmodule.c so we can see exactly what p4a is patching
+        # against. Output goes to a build artifact.
+        run: |
+          mkdir -p /tmp/grpdebug
+          cd /tmp/grpdebug
+          curl -sSL https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz -o cpython.tar.gz
+          tar -xzf cpython.tar.gz cpython-3.11.4/Modules/grpmodule.c
+          # Show the first 20 lines with explicit line endings
+          head -n 20 cpython-3.11.4/Modules/grpmodule.c | cat -A > first20_visible.txt
+          # Hex dump first 200 bytes
+          head -c 200 cpython-3.11.4/Modules/grpmodule.c | xxd > first200_hex.txt
+          echo "=== first 20 lines (cat -A) ==="
+          cat first20_visible.txt
+          echo "=== first 200 bytes (xxd) ==="
+          cat first200_hex.txt
+          echo "=== full file checksum ==="
+          sha256sum cpython-3.11.4/Modules/grpmodule.c
+
       - name: Build debug APK (auto-accept SDK licenses)
         env:
           # Yes-pipe the sdkmanager license prompt so p4a's android-sdk

@@ -1,0 +1,22 @@
+# Buildozer + p4a artifacts
+/.buildozer/
+/bin/
+*.pyc
+__pycache__/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local-only files
+*.local
+*.secret
+# Push helper (one-time use, never commit)
+/push_to_github.py

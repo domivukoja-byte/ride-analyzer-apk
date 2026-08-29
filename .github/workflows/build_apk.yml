@@ -199,11 +199,31 @@ jobs:
             tail -n 80 build.log
             echo "---- url / 502 mentions from full log ----"
             grep -E 'urlopen|HTTPError|Downloading|https?://|tar\.xz|tar\.gz|\.zip|\.aar' build.log | tail -n 200
+            echo "---- error / Traceback / fatal from full log ----"
+            grep -nE 'Traceback|fatal error|Error |error:|Exception' build.log | tail -n 200
+            # Always save build.log as an artifact even on failure so we can
+            # debug without losing the redirected stdout/stderr.
+            mkdir -p build_failure_logs
+            cp build.log build_failure_logs/build.log
             exit 1
           fi
 
       - name: List built artifacts
         run: ls -lh bin/ 2>/dev/null || true
+
+      # Always upload build.log (or the failure log copy) so we can debug
+      # even when the build fails. The GHA log truncates; build.log is the
+      # full redirected stdout/stderr from buildozer.
+      - name: Upload build log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ride-analyzer-build-log
+          path: |
+            build.log
+            build_failure_logs/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4

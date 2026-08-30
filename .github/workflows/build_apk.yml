@@ -33,11 +33,14 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          # v15: bump because v14 still failed. The new patch has
-          # minimal 1-line context (`#include <grp.h>`) for max
-          # tolerance to context drift. Bump to avoid serving a
-          # cached grpmodule.c that's been partially patched.
-          key: ${{ runner.os }}-buildozer-v15-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          # v16: bump because v15's cached kivy build state would skip
+          # our new cgl_gl_glShaderSource.patch (kivy stores its own
+          # .patched marker after first run, so cached state replays
+          # the old un-patched cgl_gl.pyx → cgl_gl.c → clang error on
+          # glShaderSource. Bumping the cache forces a fresh extract
+          # and re-apply. p4a_recipes/ contents are also hashed in so
+          # any future recipe change invalidates cleanly.
+          key: ${{ runner.os }}-buildozer-v16-${{ hashFiles('buildozer.spec', 'requirements.txt') }}-${{ hashFiles('p4a_recipes/**') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -99,7 +102,7 @@ jobs:
       - name: Install Buildozer
         run: python -m pip install "buildozer==1.5.0"
 
-      - name: Clear stale python3 build state
+      - name: Clear stale python3 + kivy build state
         # The buildozer cache (restored via restore-keys) preserves the
         # extracted cpython-3.11.4 source tree AND a .patched marker.
         # If the marker is present, p4a's apply_patches short-circuits
@@ -108,12 +111,21 @@ jobs:
         # if a prior run used a different cpython version, the cached
         # tree would have the wrong grpmodule.c and our patch would
         # fail to match. nuke the build dir on every run.
+        # Same logic for kivy: cgl_gl.pyx lives in a kivy-2.3.0/ tree
+        # with its own .patched marker; we need it cleared so our
+        # cgl_gl_glShaderSource.patch (which fixes NDK r28c's
+        # incompatible-function-pointer-types error on glShaderSource)
+        # is applied on every run.
         run: |
           rm -rf .buildozer/android/platform/build-*/build/other_builds/python3
           rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/python3
           rm -rf .buildozer/android/platform/build-*/build/other_builds/hostpython3
           rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/hostpython3
-          echo "cleared python3 build state"
+          rm -rf .buildozer/android/platform/build-*/build/other_builds/kivy
+          rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/kivy
+          rm -rf .buildozer/android/platform/build-*/build/other_builds/kivy-sdl2
+          rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/kivy-sdl2
+          echo "cleared python3 + kivy build state"
 
       - name: Build debug APK (auto-accept SDK licenses)
         env:

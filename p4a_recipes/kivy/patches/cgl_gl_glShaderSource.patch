@@ -1,0 +1,10 @@
+--- kivy/graphics/cgl_backend/cgl_gl.pyx
++++ kivy/graphics/cgl_backend/cgl_gl.pyx
+@@ -103,7 +103,7 @@
+     void (__stdcall *glScissor)(GLint, GLint, GLsizei, GLsizei) nogil
+     void (__stdcall *glShaderBinary)(GLsizei, const GLuint *, GLenum, const void *, GLsizei) nogil
+-    void (__stdcall *glShaderSource)(GLuint, GLsizei, const GLchar**, const GLint *) nogil
++    void (__stdcall *glShaderSource)(GLuint, GLsizei, const GLchar *const *, const GLint *) nogil
+     void (__stdcall *glStencilFunc)(GLenum func, GLint ref, GLuint mask) nogil
+     void (__stdcall *glStencilFuncSeparate)(GLenum face, GLenum func, GLint ref, GLuint mask) nogil
+     void (__stdcall *glStencilMask)(GLuint mask) nogil

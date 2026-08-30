@@ -13,6 +13,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify p4a_recipes files on disk
+        # Diagnostic: prove that all 4 kivy recipe files actually exist in
+        # the workspace after checkout. If use_cython.patch / no-ast-str.patch /
+        # sdl-gl-swapwindow-nogil.patch are missing here, the build is doomed
+        # before p4a even starts. Last build (#69) reported
+        # "Can't open patch file .../p4a_recipes/kivy/use_cython.patch" which
+        # either means the file is missing post-checkout OR something
+        # filters p4a_recipes/ from the source dir passed to p4a.
+        run: |
+          echo "==== pwd: $(pwd) ===="
+          echo "==== ls -la p4a_recipes/ ===="
+          ls -la p4a_recipes/
+          echo "==== ls -la p4a_recipes/kivy/ ===="
+          ls -la p4a_recipes/kivy/
+          echo "==== ls -la p4a_recipes/kivy/patches/ ===="
+          ls -la p4a_recipes/kivy/patches/
+          echo "==== file p4a_recipes/kivy/use_cython.patch ===="
+          file p4a_recipes/kivy/use_cython.patch 2>&1 || echo "MISSING"
+          echo "==== find p4a_recipes -name '*.patch' -o -name '*.diff' ===="
+          find p4a_recipes -name '*.patch' -o -name '*.diff' | sort
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

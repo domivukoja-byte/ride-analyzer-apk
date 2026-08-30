@@ -33,10 +33,11 @@ jobs:
             ~/.buildozer
             .buildozer
             ~/.local/share/python-for-android
-          # v14: bump because v13 was still serving a stale
-          # python3 build dir via restore-keys, and grpmodule-decl.patch
-          # failed to match the (cached, possibly wrong-version) source.
-          key: ${{ runner.os }}-buildozer-v14-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          # v15: bump because v14 still failed. The new patch has
+          # minimal 1-line context (`#include <grp.h>`) for max
+          # tolerance to context drift. Bump to avoid serving a
+          # cached grpmodule.c that's been partially patched.
+          key: ${{ runner.os }}-buildozer-v15-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
@@ -113,26 +114,6 @@ jobs:
           rm -rf .buildozer/android/platform/build-*/build/other_builds/hostpython3
           rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/hostpython3
           echo "cleared python3 build state"
-
-      - name: Snapshot grpmodule.c pre-extract
-        # Diagnostic: download cpython 3.11.4 tarball and save the raw
-        # grpmodule.c so we can see exactly what p4a is patching
-        # against. Output goes to a build artifact.
-        run: |
-          mkdir -p /tmp/grpdebug
-          cd /tmp/grpdebug
-          curl -sSL https://github.com/python/cpython/archive/refs/tags/v3.11.4.tar.gz -o cpython.tar.gz
-          tar -xzf cpython.tar.gz cpython-3.11.4/Modules/grpmodule.c
-          # Show the first 20 lines with explicit line endings
-          head -n 20 cpython-3.11.4/Modules/grpmodule.c | cat -A > first20_visible.txt
-          # Hex dump first 200 bytes
-          head -c 200 cpython-3.11.4/Modules/grpmodule.c | xxd > first200_hex.txt
-          echo "=== first 20 lines (cat -A) ==="
-          cat first20_visible.txt
-          echo "=== first 200 bytes (xxd) ==="
-          cat first200_hex.txt
-          echo "=== full file checksum ==="
-          sha256sum cpython-3.11.4/Modules/grpmodule.c
 
       - name: Build debug APK (auto-accept SDK licenses)
         env:

@@ -1,5 +1,5 @@
---- kivy/graphics/cgl_backend/cgl_gl.pyx
-+++ kivy/graphics/cgl_backend/cgl_gl.pyx
+--- kivy-2.3.0/kivy/graphics/cgl_backend/cgl_gl.pyx
++++ kivy-2.3.0.mod/kivy/graphics/cgl_backend/cgl_gl.pyx
 @@ -103,7 +103,7 @@
      void (__stdcall *glScissor)(GLint, GLint, GLsizei, GLsizei) nogil
      void (__stdcall *glShaderBinary)(GLsizei, const GLuint *, GLenum, const void *, GLsizei) nogil

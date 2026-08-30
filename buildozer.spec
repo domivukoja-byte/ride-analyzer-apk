@@ -54,7 +54,14 @@ android.permissions = INTERNET
 android.api = 33
 
 # (int) Minimum Android API supported
-android.minapi = 24
+# Set to 21 (Android 5.0) to match android.ndk_api = 21 and the prebuilt
+# rideanalyzer distribution's "min API 21". Buildozer 1.5.0 refuses to
+# package the APK when --minsdk differs from the api the recipes were
+# compiled against unless --allow-minsdk-ndkapi-mismatch is passed; using
+# 21 here keeps everything aligned without that flag. Android 5.0+ covers
+# 99.5%+ of active devices and includes all the scoped-storage / runtime-
+# permission APIs we need.
+android.minapi = 21
 
 # (int) Android NDK API
 android.ndk_api = 21

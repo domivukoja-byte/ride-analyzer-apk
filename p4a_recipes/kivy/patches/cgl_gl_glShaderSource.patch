@@ -1,6 +1,54 @@
+--- kivy-2.3.0/kivy/include/common_subset.h
++++ kivy-2.3.0.mod/kivy/include/common_subset.h
+@@ -373,7 +373,7 @@
+ GL_APICALL void         GL_APIENTRY glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid* pixels);
+ GL_APICALL void         GL_APIENTRY glSampleCoverage (GLclampf value, GLboolean invert);
+ GL_APICALL void         GL_APIENTRY glScissor (GLint x, GLint y, GLsizei width, GLsizei height);
+-GL_APICALL void         GL_APIENTRY glShaderSource (GLuint shader, GLsizei count, const GLchar** string, const GLint* length);
++GL_APICALL void         GL_APIENTRY glShaderSource (GLuint shader, GLsizei count, const GLchar* const * string, const GLint* length);
+ GL_APICALL void         GL_APIENTRY glStencilFunc (GLenum func, GLint ref, GLuint mask);
+ GL_APICALL void         GL_APIENTRY glStencilFuncSeparate (GLenum face, GLenum func, GLint ref, GLuint mask);
+ GL_APICALL void         GL_APIENTRY glStencilMask (GLuint mask);
+--- kivy-2.3.0/kivy/graphics/cgl.pxd
++++ kivy-2.3.0.mod/kivy/graphics/cgl.pxd
+@@ -471,7 +471,7 @@
+ ctypedef void (__stdcall *GLSAMPLECOVERAGEPTR)(GLclampf value, GLboolean invert) nogil
+ ctypedef void (__stdcall *GLSCISSORPTR)(GLint, GLint, GLsizei, GLsizei) nogil
+ ctypedef void (__stdcall *GLSHADERBINARYPTR)(GLsizei, const GLuint *, GLenum, const void *, GLsizei) nogil
+-ctypedef void (__stdcall *GLSHADERSOURCEPTR)(GLuint, GLsizei, const GLchar**, const GLint *) nogil
++ctypedef void (__stdcall *GLSHADERSOURCEPTR)(GLuint, GLsizei, const GLchar* const *, const GLint *) nogil
+ ctypedef void (__stdcall *GLSTENCILFUNCPTR)(GLenum func, GLint ref, GLuint mask) nogil
+ ctypedef void (__stdcall *GLSTENCILFUNCSEPARATEPTR)(GLenum face, GLenum func, GLint ref, GLuint mask) nogil
+ ctypedef void (__stdcall *GLSTENCILMASKPTR)(GLuint mask) nogil
+@@ -602,7 +602,7 @@ ctypedef struct GLES2_Context:
+     void (__stdcall *glSampleCoverage)(GLclampf value, GLboolean invert) nogil
+     void (__stdcall *glScissor)(GLint, GLint, GLsizei, GLsizei) nogil
+     void (__stdcall *glShaderBinary)(GLsizei, const GLuint *, GLenum, const void *, GLsizei) nogil
+-    void (__stdcall *glShaderSource)(GLuint, GLsizei, const GLchar**, const GLint *) nogil
++    void (__stdcall *glShaderSource)(GLuint, GLsizei, const GLchar* const *, const GLint *) nogil
+     void (__stdcall *glStencilFunc)(GLenum func, GLint ref, GLuint mask) nogil
+     void (__stdcall *glStencilFuncSeparate)(GLenum face, GLenum func, GLint ref, GLuint mask) nogil
+     void (__stdcall *glStencilMask)(GLuint mask) nogil
+--- kivy-2.3.0/kivy/graphics/cgl_backend/cgl_debug.pyx
++++ kivy-2.3.0.mod/kivy/graphics/cgl_backend/cgl_debug.pyx
+@@ -883,11 +883,11 @@ cdef void __stdcall gil_dbgScissor (GLint x, GLint y, GLsizei width, GLsizei hei
+     gl_check_error()
+ # Skipping generation of: "#cdef void __stdcall dbgShaderBinary (cgl_native.GLsizei n,  cgl_native.GLuint* shaders, cgl_native.GLenum binaryformat,  cgl_native.GLvoid* binary, cgl_native.GLsizei length)"
+
+-cdef void __stdcall dbgShaderSource (GLuint shader, GLsizei count, const GLchar** string, const GLint* length) nogil:
++cdef void __stdcall dbgShaderSource (GLuint shader, GLsizei count, const GLchar* const* string, const GLint* length) nogil:
+     with gil:
+         gil_dbgShaderSource(shader, count, string, length)
+
+-cdef void __stdcall gil_dbgShaderSource (GLuint shader, GLsizei count,  const GLchar** string, const GLint* length) with gil:
++cdef void __stdcall gil_dbgShaderSource (GLuint shader, GLsizei count,  const GLchar* const* string, const GLint* length) with gil:
+     gl_debug_print("GL glShaderSource( shader = ", shader, ", count = ", count, ", string**=", repr(hex(<long long> string)), ", length*=", repr(hex(<long long> length)), ", )")
+     cgl_native.glShaderSource ( shader, count, <const_char_ptr*>string, length)
+     gl_check_error()
 --- kivy-2.3.0/kivy/graphics/cgl_backend/cgl_gl.pyx
 +++ kivy-2.3.0.mod/kivy/graphics/cgl_backend/cgl_gl.pyx
-@@ -103,7 +103,7 @@
+@@ -102,7 +102,7 @@
+     void (__stdcall *glSampleCoverage)(GLclampf value, GLboolean invert) nogil
      void (__stdcall *glScissor)(GLint, GLint, GLsizei, GLsizei) nogil
      void (__stdcall *glShaderBinary)(GLsizei, const GLuint *, GLenum, const void *, GLsizei) nogil
 -    void (__stdcall *glShaderSource)(GLuint, GLsizei, const GLchar**, const GLint *) nogil
@@ -8,3 +56,14 @@
      void (__stdcall *glStencilFunc)(GLenum func, GLint ref, GLuint mask) nogil
      void (__stdcall *glStencilFuncSeparate)(GLenum face, GLenum func, GLint ref, GLuint mask) nogil
      void (__stdcall *glStencilMask)(GLuint mask) nogil
+--- kivy-2.3.0/kivy/graphics/cgl_backend/cgl_mock.pyx
++++ kivy-2.3.0.mod/kivy/graphics/cgl_backend/cgl_mock.pyx
+@@ -208,7 +208,7 @@
+     pass
+ cdef void __stdcall mockShaderBinary(GLsizei n, const GLuint* shaders, GLenum binaryformat, const GLvoid* binary, GLsizei length) nogil:
+     pass
+-cdef void __stdcall mockShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length) nogil:
++cdef void __stdcall mockShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, const GLint* length) nogil:
+     pass
+ cdef void __stdcall mockStencilFunc(GLenum func, GLint ref, GLuint mask) nogil:
+     pass

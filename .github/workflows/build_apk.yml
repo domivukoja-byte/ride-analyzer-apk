@@ -146,6 +146,15 @@ jobs:
           rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/kivy
           rm -rf .buildozer/android/platform/build-*/build/other_builds/kivy-sdl2
           rm -rf ~/.buildozer/android/platform/build-*/build/other_builds/kivy-sdl2
+          # Also clear the prebuilt rideanalyzer distribution and the
+          # app staging directory. p4a's bootstrap/build.py make_tar()
+          # can hit a TypeError ('expected str, bytes or os.PathLike
+          # object, not NoneType') in realpath() when the cached dist
+          # has stale private/ contents. A fresh dist rebuild is fast
+          # (~1 min) and avoids the crash.
+          rm -rf .buildozer/android/platform/build-*/dists/rideanalyzer
+          rm -rf ~/.buildozer/android/platform/build-*/dists/rideanalyzer
+          rm -rf .buildozer/android/app
           echo "cleared python3 + kivy build state"
 
       - name: Build debug APK (auto-accept SDK licenses)
